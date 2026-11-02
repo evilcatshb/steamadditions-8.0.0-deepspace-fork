@@ -3,16 +3,16 @@ package com.pansmith.steamadditions.common.data;
 import com.gregtechceu.gtceu.GTCEu;
 import com.gregtechceu.gtceu.api.GTCEuAPI;
 import com.gregtechceu.gtceu.api.GTValues;
+import com.gregtechceu.gtceu.api.blockentity.BlockEntityCreationInfo;
 import com.gregtechceu.gtceu.api.capability.recipe.FluidRecipeCapability;
 import com.gregtechceu.gtceu.api.capability.recipe.ItemRecipeCapability;
 import com.gregtechceu.gtceu.api.data.RotationState;
-import com.gregtechceu.gtceu.api.machine.IMachineBlockEntity;
 import com.gregtechceu.gtceu.api.machine.MachineDefinition;
 import com.gregtechceu.gtceu.api.machine.MetaMachine;
 import com.gregtechceu.gtceu.api.machine.SimpleTieredMachine;
 import com.gregtechceu.gtceu.api.machine.multiblock.PartAbility;
-import com.gregtechceu.gtceu.api.pattern.FactoryBlockPattern;
-import com.gregtechceu.gtceu.api.pattern.Predicates;
+import com.gregtechceu.gtceu.api.multiblock.Predicates;
+import com.gregtechceu.gtceu.api.multiblock.pattern.MultiblockPatternBuilder;
 import com.gregtechceu.gtceu.api.recipe.GTRecipeType;
 import com.gregtechceu.gtceu.api.recipe.OverclockingLogic;
 import com.gregtechceu.gtceu.api.registry.registrate.MachineBuilder;
@@ -31,8 +31,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiFunction;
 
+import com.gregtechceu.gtceu.api.machine.property.GTMachineModelProperties;
+import com.gregtechceu.gtceu.api.machine.trait.recipe.RecipeLogic;
+import static com.gregtechceu.gtceu.api.multiblock.util.RelativeDirection.*;
 import static com.gregtechceu.gtceu.api.GTValues.*;
-import static com.gregtechceu.gtceu.api.pattern.Predicates.blocks;
+import static com.gregtechceu.gtceu.api.multiblock.Predicates.blocks;
 import static com.gregtechceu.gtceu.common.data.GTBlocks.CASING_BRONZE_BRICKS;
 import static com.gregtechceu.gtceu.common.data.GTBlocks.FIREBOX_BRONZE;
 import static com.gregtechceu.gtceu.utils.FormattingUtil.toEnglishName;
@@ -46,16 +49,16 @@ public class SAMachines {
     public static final Int2IntFunction defaultTankSizeFunction = tier -> (tier <= GTValues.LV ? 8 : tier == GTValues.MV ? 12 : tier == GTValues.HV ? 16 : tier == GTValues.EV ? 32 : 64) * FluidType.BUCKET_VOLUME;
 
     public static final MachineDefinition STEAM_CENTRIFUGE = REGISTRATE.multiblock("steam_separator", SteamParallelMultiblockMachine::new)
-            .rotationState(RotationState.NON_Y_AXIS)
+            .rotationState(RotationState.ALL)
             .appearanceBlock(CASING_BRONZE_BRICKS)
             .recipeType(GTRecipeTypes.CENTRIFUGE_RECIPES)
             .recipeModifier(SteamParallelMultiblockMachine::recipeModifier, true)
 //            .addOutputLimit(ItemRecipeCapability.CAP, 1) Balance is for cowards
-            .pattern(definition -> FactoryBlockPattern.start()
-                    .aisle("XXX", "XXX", " X ")
-                    .aisle("XXX", "X#X", "XXX")
-                    .aisle("XXX", "XSX", " X ")
-                    .where('S', Predicates.controller(blocks(definition.getBlock())))
+            .pattern(definition -> MultiblockPatternBuilder.start(FRONT, UP, RIGHT)
+                    .slice("XXX", "XXX", " X ")
+                    .slice("XXX", "X#X", "XXX")
+                    .slice("XXX", "XSX", " X ")
+                    .where('S', Predicates.controller(definition))
                     .where('#', Predicates.air())
                     .where(' ', Predicates.any())
                     .where('X', blocks(CASING_BRONZE_BRICKS.get()).setMinGlobalLimited(6)
@@ -64,22 +67,21 @@ public class SAMachines {
                             .or(Predicates.abilities(PartAbility.STEAM_EXPORT_ITEMS).setPreviewCount(1)))
                     .build())
             .workableCasingModel(GTCEu.id("block/casings/solid/machine_casing_bronze_plated_bricks"),
-
                     GTCEu.id("block/machines/centrifuge"))
             .tooltips(Component.translatable("block.steamadditions.steam_separator.tooltip"))
             .register();
 
     public static final MachineDefinition STEAM_ALLOY_SMELTER = REGISTRATE.multiblock("steam_foundry", SteamParallelMultiblockMachine::new)
-            .rotationState(RotationState.NON_Y_AXIS)
+            .rotationState(RotationState.ALL)
             .appearanceBlock(CASING_BRONZE_BRICKS)
             .recipeType(GTRecipeTypes.ALLOY_SMELTER_RECIPES)
             .recipeModifier(SteamParallelMultiblockMachine::recipeModifier, true)
             .addOutputLimit(ItemRecipeCapability.CAP, 1)
-            .pattern(definition -> FactoryBlockPattern.start()
-                    .aisle("FFF", "XXX", "XXX")
-                    .aisle("FFF", "X#X", "XXX")
-                    .aisle("FFF", "XSX", "XXX")
-                    .where('S', Predicates.controller(blocks(definition.getBlock())))
+            .pattern(definition -> MultiblockPatternBuilder.start(FRONT, UP, RIGHT)
+                    .slice("FFF", "XXX", "XXX")
+                    .slice("FFF", "X#X", "XXX")
+                    .slice("FFF", "XSX", "XXX")
+                    .where('S', Predicates.controller(definition))
                     .where('F', blocks(FIREBOX_BRONZE.get())
                         .or(Predicates.abilities(PartAbility.STEAM).setExactLimit(1)))
                     .where('#', Predicates.air())
@@ -88,6 +90,7 @@ public class SAMachines {
                             .or(Predicates.abilities(PartAbility.STEAM_IMPORT_ITEMS).setPreviewCount(1))
                             .or(Predicates.abilities(PartAbility.STEAM_EXPORT_ITEMS).setPreviewCount(1)))
                     .build())
+            .modelProperty(GTMachineModelProperties.RECIPE_LOGIC_STATUS, RecipeLogic.Status.IDLE)
             .model(GTMachineModels.createWorkableCasingMachineModel(
                     GTCEu.id("block/casings/solid/machine_casing_bronze_plated_bricks"),
                     GTCEu.id("block/machines/alloy_smelter"))
@@ -103,7 +106,6 @@ public class SAMachines {
                                                              int... tiers) {
         return registerTieredMachines(name, (holder, tier) -> new SimpleTieredMachine(holder, tier, tankScalingFunction), (tier, builder) -> builder
                 .langValue("%s %s %s".formatted(VLVH[tier], toEnglishName(name), VLVT[tier]))
-                .editableUI(SimpleTieredMachine.EDITABLE_UI_CREATOR.apply(GTCEu.id(name), recipeType))
                 .rotationState(RotationState.NON_Y_AXIS)
                 .recipeType(recipeType)
                 .recipeModifier(GTRecipeModifiers.ELECTRIC_OVERCLOCK.apply(OverclockingLogic.NON_PERFECT_OVERCLOCK))
@@ -121,8 +123,8 @@ public class SAMachines {
     }
     
     public static MachineDefinition[] registerTieredMachines(String name,
-                                                             BiFunction<IMachineBlockEntity, Integer, MetaMachine> factory,
-                                                             BiFunction<Integer, MachineBuilder<MachineDefinition, ?>, MachineDefinition> builder,
+                                                             BiFunction<BlockEntityCreationInfo, Integer, MetaMachine> factory,
+                                                             BiFunction<Integer, MachineBuilder<MachineDefinition, ?, ?>, MachineDefinition> builder,
                                                              int... tiers) {
         MachineDefinition[] definitions = new MachineDefinition[tiers.length];
         for (int i = 0; i < tiers.length; i++) {
